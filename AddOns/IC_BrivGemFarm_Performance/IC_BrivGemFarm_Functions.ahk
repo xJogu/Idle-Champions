@@ -81,9 +81,10 @@ class IC_BrivSharedFunctions_Class extends IC_SharedFunctions_Class
         }
         g_SharedData.LoopString := "Loading z1..."
         Sleep, 50
-        while ( !this.Memory.ReadUserIsInited() AND ElapsedTime < timeout )
+        while ( !this.Memory.ReadUserIsInited() AND g_SF.Memory.ReadCurrentZone() < 1 AND ElapsedTime < timeout )
         {
             ElapsedTime := A_TickCount - StartTime
+            Sleep, 20
         }
         if (ElapsedTime >= timeout)
         {
