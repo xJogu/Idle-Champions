@@ -17,25 +17,30 @@ ListLines Off
 Process, Priority,, High
 CoordMode, Mouse, Client
 
+#include %A_LineFile%\..\..\..\SharedFunctions\json.ahk
+#include %A_LineFile%\..\..\IC_Core\IC_SharedFunctions_Class.ahk
+#include %A_LineFile%\..\IC_BrivGemFarm_Functions.ahk
+;server call functions and variables Included after GUI so chest tabs maybe non optimal way of doing it
+#include %A_LineFile%\..\..\..\ServerCalls\IC_ServerCalls_Class.ahk
+#include %A_LineFile%\..\..\IC_Core\IC_SaveHelper_Class.ahk
+#include %A_LineFile%\..\IC_BrivGemFarm_Settings.ahk
+#include %A_LineFile%\..\..\..\SharedFunctions\SH_GUIFunctions.ahk
+#include %A_LineFile%\..\..\..\SharedFunctions\SH_UpdateClass.ahk
+
 ;Load user settings
 global g_SF := new IC_BrivSharedFunctions_Class ; includes MemoryFunctions in g_SF.Memory
 global g_BrivUserSettings 
 global g_UserSettings := g_SF.LoadObjectFromJSON( A_LineFile . "\..\..\..\Settings.json" )
 global g_BrivGemFarm := new IC_BrivGemFarm_Class
-global g_KeyMap := KeyHelper.BuildVirtualKeysMap()
+global g_KeyMap:= {}
+global g_SCKeyMap:= {}
+KeyHelper.BuildVirtualKeysMap(g_KeyMap, g_SCKeyMap)
 global g_ServerCall
 global g_InputsSent := 0
 global g_SaveHelper := new IC_SaveHelper_Class
 global g_BrivUserSettingsFromAddons := {}
 
-#include %A_LineFile%\..\..\..\SharedFunctions\json.ahk
-#include %A_LineFile%\..\..\..\SharedFunctions\IC_SharedFunctions_Class.ahk
-#include %A_LineFile%\..\IC_BrivGemFarm_Functions.ahk
-;server call functions and variables Included after GUI so chest tabs maybe non optimal way of doing it
-#include %A_LineFile%\..\..\..\ServerCalls\IC_ServerCalls_Class.ahk
-#include %A_LineFile%\..\..\..\SharedFunctions\IC_SaveHelper_Class.ahk
 #include *i %A_LineFile%\..\IC_BrivGemFarm_Mods.ahk
-#include %A_LineFile%\..\IC_BrivGemFarm_Settings.ahk
 
 ;check if first run
 If !IsObject( g_UserSettings )
@@ -55,15 +60,38 @@ try
     else
         Menu, Tray, Icon, shell32.dll, 138
 }
+
+; Update SharedData class from SharedFunctions to have extra steps when closing the script.
+class IC_BrivGemFarmRun_SharedData_Class
+{
+    Close()
+    {
+        if (g_SF.Memory.ReadCurrentZone() == "") ; Invalid game state
+            ExitApp
+        g_SF.WaitForTransition()
+        g_SF.FallBackFromZone()
+        g_SF.ToggleAutoProgress(false, false, true)
+        ExitApp
+    }
+}
+SH_UpdateClass.UpdateClassFunctions(g_SharedData, IC_BrivGemFarmRun_SharedData_Class)
+
 ;Gui, BrivPerformanceGemFarm:New, -LabelMain +hWndhMainWnd -Resize
 Gui, BrivPerformanceGemFarm:New, -Resize
+GUIFunctions.LoadTheme("BrivPerformanceGemFarm")
+GUIFunctions.UseThemeBackgroundColor()
+GUIFunctions.UseThemeTextColor()
 Gui, BrivPerformanceGemFarm:+Resize -MaximizeBox
 Gui BrivPerformanceGemFarm:Add, GroupBox, w400 h315, BrivFarm Settings: 
 Gui BrivPerformanceGemFarm:Add, ListView, xp+15 yp+25 w375 h270 vBrivFarmSettingsID -HDR, Setting|Value
+GUIFunctions.UseThemeListViewBackgroundColor("BrivFarmSettingsID")
 Gui, BrivPerformanceGemFarm:Add, Checkbox, vAdvancedBrivSettingsCheck Checked%isAdvancedBrivSettings% gReloadSettingsView_Click x55 y+5, See Advanced (All) Settings.
 ReloadBrivGemFarmSettingsDisplay() ; load settings file.
 if ( !g_BrivUserSettings[ "HiddenFarmWindow" ])
-    Gui, BrivPerformanceGemFarm:Show,% "x" . g_BrivUserSettings[ "WindowXPositon" ] " y" . g_BrivUserSettings[ "WindowYPositon" ], Running Gem Farm...
+{
+    Gui, BrivPerformanceGemFarm:Show,% "x" . g_BrivUserSettings[ "WindowXPosition" ] " y" . g_BrivUserSettings[ "WindowYPosition" ], Running Gem Farm...
+    GUIFunctions.UseThemeTitleBar("BrivPerformanceGemFarm")
+}
 
 ReloadBrivGemFarmSettingsDisplay()
 {
@@ -79,15 +107,11 @@ ReloadBrivGemFarmSettingsDisplay()
         LV_Add(, "Target Haste stacks: ", g_BrivUserSettings[ "TargetStacks" ])
     LV_Add(, "Stacking Restart wait time: ", g_BrivUserSettings[ "RestartStackTime" ])
     LV_Add(, "Auto Calculate Briv Stacks? ", g_BrivUserSettings[ "AutoCalculateBrivStacks" ] ? "Yes" : "No")
-    LV_Add(, "Buy and open Chests? ", g_BrivUserSettings[ "DoChests" ] ? "Yes" : "No")		
-    if(g_BrivUserSettings[ "DoChests" ])
-    {
-        LV_Add(, "Buy Silver? ", g_BrivUserSettings[ "BuySilvers" ] ? "Yes" : "No")
-        LV_Add(, "Buy Gold? ", g_BrivUserSettings[ "BuyGolds" ] ? "Yes" : "No")
-        LV_Add(, "Open Silver? ", g_BrivUserSettings[ "OpenSilvers" ] ? "Yes" : "No")
-        LV_Add(, "Open Gold? ", g_BrivUserSettings[ "OpenGolds" ] ? "Yes" : "No")
-        LV_Add(, "Required Gems to Buy: ", g_BrivUserSettings[ "MinGemCount" ])
-    }
+    LV_Add(, "Buy Silver? ", g_BrivUserSettings[ "BuySilvers" ] ? "Yes" : "No")
+    LV_Add(, "Buy Gold? ", g_BrivUserSettings[ "BuyGolds" ] ? "Yes" : "No")
+    LV_Add(, "Open Silver? ", g_BrivUserSettings[ "OpenSilvers" ] ? "Yes" : "No")
+    LV_Add(, "Open Gold? ", g_BrivUserSettings[ "OpenGolds" ] ? "Yes" : "No")
+    LV_Add(, "Required Gems to Buy: ", g_BrivUserSettings[ "MinGemCount" ])
     LV_ModifyCol()
 }
 
@@ -152,10 +176,6 @@ ComObjectRevoke()
     ObjRegisterActive(g_SharedData, "")
     ExitApp
 }
-
-$SC045::
-Pause
-return 
 
 BrivPerformanceGemFarmGuiClose()
 {

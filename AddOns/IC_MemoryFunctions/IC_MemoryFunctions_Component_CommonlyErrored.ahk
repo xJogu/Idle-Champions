@@ -1,9 +1,6 @@
 /*
     Memory Reads Testing
 */
-
-g_TabControlHeight += Max(g_TabControlHeight - Max(g_TabControlHeight, 600) + 420, 0)
-
 Gui, ICScriptHub:Tab, Memory View
 Gui, ICScriptHub:Font, w700
 if(IsFunc(Func("ReadMemoryFunctions.MainReads")))
@@ -23,10 +20,8 @@ Gui, ICScriptHub:Add, Text, x15 y+5, ReadConversionCurrencyBySlot:
 Gui, ICScriptHub:Add, Text, vReadConversionCurrencyBySlotLblID x+2 w170,
 Gui, ICScriptHub:Add, Text, x15 y+5, ReadForceConvertFavorBySlot: 
 Gui, ICScriptHub:Add, Text, vReadForceConvertFavorBySlotLblID x+2 w170,
-Gui, ICScriptHub:Add, Text, x15 y+5, ReadTimeScaleMultipliersKeyByIndex: 
-Gui, ICScriptHub:Add, Text, vReadTimeScaleMultipliersKeyByIndexLblID x+2 w170,
 Gui, ICScriptHub:Add, Text, x15 y+5, ReadTimeScaleMultipliersByIndex: 
-Gui, ICScriptHub:Add, Text, vReadTimeScaleMultipliersByIndexLblID x+2 w170,
+Gui, ICScriptHub:Add, Text, vReadTimeScaleMultipliersByIndexLblID x+2 w220,
 Gui, ICScriptHub:Add, Text, x15 y+5, ReadDialogNameBySlot: 
 Gui, ICScriptHub:Add, Text, x20 y+5 vReadDialogNameBySlotLblID w200 h165,
 
@@ -66,7 +61,6 @@ class ReadMemoryFunctionsExtended
         GuiControl, ICScriptHub:, GetForceConvertFavorLblID, % g_SF.Memory.GetForceConvertFavor()
         GuiControl, ICScriptHub:, ReadConversionCurrencyBySlotLblID, % this.GetConversionCurrencyStrings()
         GuiControl, ICScriptHub:, ReadForceConvertFavorBySlotLblID, % this.GetForceConvertFavorTagInAllSlots()
-        GuiControl, ICScriptHub:, ReadTimeScaleMultipliersKeyByIndexLblID, % this.GetMultipliersKeyString()
         GuiControl, ICScriptHub:, ReadTimeScaleMultipliersByIndexLblID, % this.GetMultipliersString()
         GuiControl, ICScriptHub:, ReadDialogNameBySlotLblID, % this.GetDialogNameStrings()
         GuiControl, ICScriptHub:, InstanceIDID, % g_SF.Memory.ReadInstanceID()
@@ -83,31 +77,13 @@ class ReadMemoryFunctionsExtended
         multiplierTotal := 1
         size := g_SF.Memory.ReadTimeScaleMultipliersCount()
         i := 0
-        if size
+        if (size > 0 AND size < 150)
             multipliersString := "["
+        else
+            return ""
         loop, %size%
         {
             value := g_SF.Memory.ReadTimeScaleMultiplierByIndex(i)
-            if(i == size - 1)
-                multipliersString .= value . "]"
-            else
-                multipliersString .= value . ", "
-            multiplierTotal *= Max(1.0, value)
-            i++
-        }
-        return multipliersString
-    }
-
-    GetMultipliersKeyString()
-    {
-        multiplierTotal := 1
-        size := g_SF.Memory.ReadTimeScaleMultipliersCount()
-        i := 0
-        if size
-            multipliersString := "["
-        loop, %size%
-        {
-            value := g_SF.Memory.ReadTimeScaleMultiplierKeyByIndex(i)
             if(i == size - 1)
                 multipliersString .= value . "]"
             else
@@ -122,8 +98,9 @@ class ReadMemoryFunctionsExtended
     {
         size := g_SF.Memory.ReadDialogsListSize()
         i := 0
-        if size is integer
-            currencyString := "["
+        if(size > 50 OR size < 0) ; sanity check
+            return ""
+        currencyString := "["
         loop, %size%
         {
             value := g_SF.Memory.ReadConversionCurrencyBySlot(i)
@@ -140,8 +117,9 @@ class ReadMemoryFunctionsExtended
     {
         size := g_SF.Memory.ReadDialogsListSize()
         i := 0
-        if size is integer
-            dialogString := "["
+        if(size > 50 OR size < 0) ; sanity check
+            return ""
+        dialogString := "["
         loop, %size%
         {
             value := g_SF.Memory.ReadDialogNameBySlot(i)
@@ -158,8 +136,8 @@ class ReadMemoryFunctionsExtended
     {
         size := g_SF.Memory.ReadDialogsListSize()
         i := 0
-        if size is not integer
-            return
+        if(size > 50 OR size < 0) ; sanity check
+            return ""
         loop, %size%
         {
             value := g_SF.Memory.ReadForceConvertFavorBySlot(i)

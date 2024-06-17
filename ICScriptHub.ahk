@@ -1,8 +1,10 @@
+#Requires AutoHotkey 1.1.33+ <1.2
 #SingleInstance force
 ;put together with the help from many different people. thanks for all the help.
 #HotkeyInterval 1000  ; The default value is 2000 (milliseconds).
 #MaxHotkeysPerInterval 70 ; The default value is 70
 #NoEnv ; Avoids checking empty variables to see if they are environment variables (recommended for all new scripts). Default behavior for AutoHotkey v2.
+; #Warn ALL, OutputDebug
 ;=======================
 ;Script Optimization
 ;=======================
@@ -17,47 +19,47 @@ Process, Priority,, Normal
 
 CoordMode, Mouse, Client
 
-
 ;Modron Automation Gem Farming Script
 GetScriptHubVersion()
 {
-    return "v3.5.1, 2022-09-01"
+    return "v4.0.0, 2024-03-19"
 }
 
 ;class and methods for parsing JSON (User details sent back from a server call)
 #include %A_ScriptDir%\SharedFunctions\json.ahk
 ;server call functions and variables Included after GUI so chest tabs maybe non optimal way of doing it
-#include %A_ScriptDir%\ServerCalls\IC_ServerCalls_Class.ahk
+#include %A_ScriptDir%\ServerCalls\SH_ServerCalls_Includes.ahk
 ;logging functions
 ;#include *i %A_ScriptDir%\Logging\IC_Log_Class.ahk
 
-global g_KeyMap := KeyHelper.BuildVirtualKeysMap()
+global g_KeyMap:= {}
+global g_SCKeyMap:= {}
+KeyHelper.BuildVirtualKeysMap(g_KeyMap, g_SCKeyMap)
 global g_ServerCall
 global g_UserSettings := {}
 global g_TabControlHeight := 630
 global g_TabControlWidth := 430
-global g_SF := new IC_SharedFunctions_Class ; includes MemoryFunctions in g_SF.Memory
 global g_InputsSent := 0
 global g_TabList := ""
-global g_CustomColor := 0x333333
-global g_isDarkMode := false
 global g_PlayButton := A_LineFile . "\..\Images\play-100x100.png"
 global g_StopButton := A_LineFile . "\..\Images\stop-100x100.png"
 global g_ConnectButton := A_LineFile . "\..\Images\connect-100x100.png"
 global g_ReloadButton := A_LineFile . "\..\Images\refresh-smooth-25x25.png"
 global g_SaveButton := A_LineFile . "\..\Images\save-100x100.png"
 global g_GameButton := A_LineFile . "\..\Images\idledragons-25x25.png"
+global g_MacroButton := A_LineFile . "\..\Images\macro-100x100.png"
 global g_MouseTooltips := {}
 global g_Miniscripts := {}
-;TODO: convert g_isDarkMode to use gui functions
-if (g_isDarkMode)
-    GUIfunctions.isDarkMode := true
-if (g_isDarkMode)
+
+;Load themes
+GUIFunctions.LoadTheme()
+if (GUIfunctions.isDarkMode)
+{
     g_ReloadButton := A_LineFile . "\..\Images\refresh-smooth-white-25x25.png"
-
+    g_MacroButton := A_LineFile . "\..\Images\macro-dark-100x100.png"
+}
 ;Load user settings
-g_UserSettings := g_SF.LoadObjectFromJSON( A_LineFile . "\..\Settings.json" )
-
+g_UserSettings := IC_SharedFunctions_Class.LoadObjectFromJSON( A_LineFile . "\..\Settings.json" )
 ;check if first run
 If !IsObject( g_UserSettings )
 {
@@ -68,39 +70,43 @@ if ( g_UserSettings[ "InstallPath" ] == "" )
     g_UserSettings[ "InstallPath" ] := "C:\Program Files (x86)\Steam\steamapps\common\IdleChampions\IdleDragons.exe"
 if (g_UserSettings[ "ExeName"] == "")
     g_UserSettings[ "ExeName"] := "IdleDragons.exe"
-if ( g_UserSettings[ "WindowXPositon" ] == "" )
-    g_UserSettings[ "WindowXPositon" ] := 0
-if ( g_UserSettings[ "WindowYPositon" ] == "" )
-    g_UserSettings[ "WindowYPositon" ] := 0
+if ( g_UserSettings[ "WindowXPosition" ] == "" )
+    g_UserSettings[ "WindowXPosition" ] := 0
+if ( g_UserSettings[ "WindowYPosition" ] == "" )
+    g_UserSettings[ "WindowYPosition" ] := 0
 if ( g_UserSettings[ "NoCtrlKeypress" ] == "" )
     g_UserSettings[ "NoCtrlKeypress" ] := 0
 if ( g_UserSettings[ "WaitForProcessTime" ] == "" )
     g_UserSettings[ "WaitForProcessTime" ] := 0
-if(g_UserSettings[ "WriteSettings" ] := true)
+if(g_UserSettings[ "WriteSettings" ] == true)
 {
     g_UserSettings.Delete("WriteSettings")
-    g_SF.WriteObjectToJSON( A_LineFile . "\..\Settings.json" , g_UserSettings )
+    IC_SharedFunctions_Class.WriteObjectToJSON( A_LineFile . "\..\Settings.json" , g_UserSettings )
 }
+
+
+global g_SF := new SH_SharedFunctions ; includes MemoryFunctions in g_SF.Memory
 
 ;define a new gui with tabs and buttons
 Gui, ICScriptHub:New
-Gui, ICScriptHub:+Resize -MaximizeBox
+Gui, ICScriptHub:+Resize -MaximizeBox 
+Gui, ICScriptHub: +HwndGUIICScriptHub
 ;Gui, ICScriptHub:Add, Button, x4 y5 w50 gReload_Clicked, `Reload
 ;Gui, ICScriptHub:Add, Button, x+20 gLaunch_Clicked, Launch IC
 global g_MenuBarXPos:=4
 GUIFunctions.AddButton(g_GameButton,"Launch_Clicked","LaunchClickButton")
 GUIFunctions.AddButton(g_ReloadButton,"Reload_Clicked","ReloadClickButton")
+GUIFunctions.AddButton(g_MacroButton, "Launch_Macro_Clicked", "LaunchMacroClickButton")
 
-if(g_isDarkMode)
-    Gui, ICScriptHub:Font, cSilver ;
+GUIFunctions.UseThemeTextColor()
 ; Needed to add tabs
-Gui, ICScriptHub:Add, Tab3, x5 y32 w%TabControlWidth%+40 h%TabControlHeight%+40 vModronTabControl, %g_TabList%
+Gui, ICScriptHub:Add, Tab3, x5 y32 w%g_TabControlWidth%+40 h%g_TabControlHeight%+40 vModronTabControl, %g_TabList%
 ; Set specific tab ordering for prioritized scripts.
 
 GuiControl, Move, ICScriptHub:ModronTabControl, % "w" . g_TabControlWidth . " h" . g_TabControlHeight
-if(g_isDarkMode)
-    Gui, ICScriptHub:Color, % g_CustomColor
-Gui, ICScriptHub:Show, %  "x" . g_UserSettings[ "WindowXPositon" ] " y" . g_UserSettings[ "WindowYPositon" ] . " w" . g_TabControlWidth+5 . " h" . g_TabControlHeight, % "IC Script Hub" . (g_UserSettings[ "WindowTitle" ] ? (" - " .  g_UserSettings[ "WindowTitle" ]) : "")
+GUIFunctions.UseThemeBackgroundColor()
+Gui, ICScriptHub:Show, %  "x" . g_UserSettings[ "WindowXPosition" ] " y" . g_UserSettings[ "WindowYPosition" ] . " w" . g_TabControlWidth+5 . " h" . g_TabControlHeight, % "IC Script Hub" . (g_UserSettings[ "WindowTitle" ] ? (" - " .  g_UserSettings[ "WindowTitle" ]) : "") . "  (Loading...)"
+GUIFunctions.UseThemeTitleBar("ICScriptHub")
 ;WinSet, Style, -0xC00000, A  ; Remove the active window's title bar (WS_CAPTION).
 
 Reload_Clicked()
@@ -112,9 +118,29 @@ Reload_Clicked()
 Launch_Clicked()
 {
     programLoc := g_UserSettings[ "InstallPath" ]
-    Run, %programLoc%
+    try
+    {
+        Run, %programLoc%
+    }
+    catch
+    {
+        MsgBox, 48, Unable to launch game, `nVerify the game location is set properly by enabling the Game Location Settings addon, clicking Change Game Location on the Briv Gem Farm tab, and ensuring the launch command is set properly.
+    }
     Process, Exist, % g_UserSettings[ "ExeName"]
     g_SF.PID := ErrorLevel
+}
+
+Launch_Macro_Clicked()
+{
+    macroRecLoc :=  A_LineFile . "\..\SharedFunctions\SH_MacroRecorder.ahk"
+    try
+    {
+        Run, %A_AhkPath% /r "%macroRecLoc%"
+    }
+    catch
+    {
+        MsgBox, 48, Unable to launch Macro Recorder, `nThere was a problem launching the Macro Recorder
+    }
 }
 
 ICScriptHubGuiClose()
@@ -142,14 +168,16 @@ BuildToolTips()
 {
     GUIFunctions.AddToolTip("LaunchClickButton", "Launch Idle Champions")
     GUIFunctions.AddToolTip("ReloadClickButton", "Reload Script Hub")
+    GUIFunctions.AddToolTip("LaunchMacroClickButton", "Launch Macro Recorder")
 }
 
 ; Shows a tooltip if the control with mouseover has a tooltip associated with it.
 CheckControlForTooltip()
 {
-        MouseGetPos,,,, VarControl
-        if(VarControl)
-            ToolTip % g_MouseToolTips[VarControl]
+        MouseGetPos,,,VarWin, VarControl
+        varTTLoc := VarWin . VarControl
+        if(varTTLoc)
+            ToolTip % g_MouseToolTips[varTTLoc]
         else
             ToolTip
         SetTimer, HideToolTip, -3000
@@ -162,11 +190,11 @@ HideToolTip()
 
 ;#include %A_ScriptDir%\SharedFunctions\Windrag.ahk
 ; Shared Functions
-#include %A_ScriptDir%\SharedFunctions\IC_SharedFunctions_Class.ahk
-#include %A_ScriptDir%\SharedFunctions\IC_ArrayFunctions_Class.ahk
-#include %A_ScriptDir%\SharedFunctions\IC_KeyHelper_Class.ahk
-#include %A_ScriptDir%\SharedFunctions\IC_GUIFunctions_Class.ahk
-#include %A_ScriptDir%\SharedFunctions\IC_UpdateClass_Class.ahk
+#include %A_ScriptDir%\SharedFunctions\SH_SharedFunctions.ahk
+#include %A_ScriptDir%\SharedFunctions\SH_ArrFnc.ahk
+#include %A_ScriptDir%\SharedFunctions\SH_KeyHelper.ahk
+#include %A_ScriptDir%\SharedFunctions\SH_GUIFunctions.ahk
+#include %A_ScriptDir%\SharedFunctions\SH_UpdateClass.ahk
 #include *i %A_ScriptDir%\AddOns\AddOnsIncluded.ahk
 
 ;#IfWinActive ahk_exe AutoHotkeyU64.exe
@@ -177,6 +205,7 @@ BuildToolTips()
 if(IsObject(AddonManagement))
     AddonManagement.BuildToolTips()
 
+Gui, ICScriptHub:Show,, % "IC Script Hub" . (g_UserSettings[ "WindowTitle" ] ? (" - " .  g_UserSettings[ "WindowTitle" ]) : "")
 
 StopMiniscripts()
 {

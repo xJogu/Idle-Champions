@@ -10,18 +10,14 @@ Gui, ICScriptHub:Add, Text, x15 yp+5, `All Memory Functions:
 Gui, ICScriptHub:Font, w400
 Gui, ICScriptHub:Add, Checkbox,x145 yp+0 vMemoryFunctionsFullRead_LoadHandlers, Champions
 
-if(g_isDarkMode)
-    Gui, Font, g_CustomColor
+GUIFunctions.UseThemeTextColor("TableTextColor")
 Gui, ICScriptHub:Add, ListView, x15 y+8 w525 h650 vMemoryFunctionsViewID, Function|x|Value
-if(g_isDarkMode)
-{
-    GuiControl,ICScriptHub: +Background888888, MemoryFunctionsViewID
-    Gui, ICScriptHub:Font, cSilver
-}
 
+GUIFunctions.UseThemeListViewBackgroundColor("MemoryFunctionsViewID")
+GUIFunctions.UseThemeTextColor("DefaultTextColor")
 class IC_MemoryFunctionsFullRead_Component
 {
-    static exclusionList := [ "__Init", "__new",  "BinarySearchList", "ConvQuadToString", "ConvQuadToString2", "ConvQuadToString3", "GenericGetValue", "OpenProcessReader", "ReadConversionCurrencyBySlot", "ReadUserHash", "ReadUserID", "ReadTimeScaleMultipliersKeyByIndex", "AdjustObjectListIndexes" ]
+    static exclusionList := [ "__Init", "__new",  "BinarySearchList", "GenericGetValue", "OpenProcessReader", "ReadConversionCurrencyBySlot", "BuildChestIndexList", "InitializeChestsIndices", "ReadUserHash", "ReadUserID" ]
     InExclusionsList(value)
     {
         static
@@ -42,7 +38,6 @@ class IC_MemoryFunctionsFullRead_Component
     }
 
     ; Current valid ERRORs to reads using value 1:
-    ;   ReadTimeScaleMultipliersKeyByIndex - May be modron core speed which won't read effect data
     ;   ReadChampIDBySlot - make sure a champion is in slot 1 on the game field or this will have an error. (game field slots start at 0 at the far right and count: right to left, top to bottom)
     ;   ReadUltimateButtonChampIDByItem - Must have at least 2 ultimate abilities unlocked or this will error.
     ReadAllFunctions()
@@ -80,7 +75,7 @@ class IC_MemoryFunctionsFullRead_Component
                 {
                     if( isFunc(v2) ) ; Handler Fields/Functions
                     {
-                        parameterString := k1 . "..." . k2 . (v2.MaxParams > 4 ? "(...)" : (v2.MaxParams > 3 ? "(x,y,z)" : (v2.MaxParams > 2 ? "(x,y)" : (v2.MaxParams > 1 ? "(x)" : ""))))
+                        parameterString := k . "..." . k2 . (v2.MaxParams > 4 ? "(...)" : (v2.MaxParams > 3 ? "(x,y,z)" : (v2.MaxParams > 2 ? "(x,y)" : (v2.MaxParams > 1 ? "(x)" : ""))))
                         currentObject := ActiveEffectKeySharedFunctions[k][k1]
                         fncToCall := ObjBindMethod(currentObject, k2)
                         value := v2.Maxparams >= 2 ? fncToCall.Call(valueToPass) : fncToCall.Call()
@@ -98,7 +93,7 @@ class IC_MemoryFunctionsFullRead_Component
     SwapPointers()
     {
         MsgBox, Closing Script Hub and running the pointer version picker.
-        versionPickerLoc := A_LineFile . "\..\..\..\SharedFunctions\IC_VersionPicker.ahk"
+        versionPickerLoc := A_LineFile . "\..\..\IC_Core\IC_VersionPicker.ahk"
         Run, %versionPickerLoc%
         ExitApp
     }

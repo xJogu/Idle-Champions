@@ -1,7 +1,15 @@
 # IC Script Hub
 ## ``New:``
-Script Hub has been updated for use with and with antilectual's [ScriptHub-AutomaticOffsets](https://github.com/antilectual/ScriptHub-AutomaticOffsets). See the the linked repo for instructions on how to use it to update Script Hub's offsets.
+> [!WARNING] 
+> When upgrading from a previous version to 4.0.0 you will need to run ``Migrate-To-SH-4.0.0.ahk`` once before running ICScriptHub.ahk. This is required to fix the ``Error: Unknown Class``.  
 
+2024-03-21 [Script 4.0.0 Release](docfiles/update-4-0-0-news.md)
+
+## ``Previous:``
+2023-04-12: [Script 3.6.0 Release](docfiles/update-3-6-0-news.md).  
+2022-05-16: [ScriptHub-AutomaticOffsets](https://github.com/antilectual/ScriptHub-AutomaticOffsets).  
+
+---  
 ## Introduction
 
 > "This is your last chance. After this, there is no turning back. You take the blue pill—the story ends, you wake up in your bed and believe whatever you want to believe. You take the red pill—you stay in Wonderland, and I show you how deep the rabbit hole goes. Remember: all I'm offering is the truth. Nothing more." 
@@ -27,7 +35,7 @@ CNE will at times push out multiple patches during the week, changing classes an
 
 ## Prerequisites
 
-You need AutoHotKey installed to be able to use `IC Script Hub`. The version of AutoHotKey installed also needs to support the switch command. 
+You need AutoHotKey installed to be able to use `IC Script Hub`. The version of AutoHotKey installed also needs to be version 1.1 and support the switch command. 
 
 [Download AutoHotKey](https://www.autohotkey.com/)
 
